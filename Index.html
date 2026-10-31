@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tug-of-War Knowledge Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            overflow-x: hidden;
+        }
+        .rope-container {
+            position: relative;
+            width: 100%;
+            height: 100px;
+            display: flex;
+            align-items: center;
+        }
+        .rope {
+            width: 100%;
+            height: 12px;
+            background: #8B4513; /* Brown rope color */
+            border-radius: 6px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+            position: relative;
+        }
+        /* Marks on the rope */
+        .rope-mark {
+            position: absolute;
+            height: 24px;
+            width: 4px;
+            background-color: rgba(255,255,255,0.5);
+            top: -6px;
+            transform: translateX(-50%);
+        }
+        .center-mark {
+            height: 36px;
+            width: 6px;
+            background-color: #ffd700;
+            top: -12px;
+            z-index: 10;
+        }
+        .flag-wrapper {
+            position: absolute;
+            top: -45px;
+            transform: translateX(-50%);
+            transition: left 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .flag {
+            font-size: 3rem;
+            color: #ff4757;
+            filter: drop-shadow(0 4px 3px rgba(0,0,0,0.3));
+        }
+        .option-btn {
+            transition: all 0.2s ease;
+        }
+        .option-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .option-btn:active {
+            transform: translateY(1px);
+        }
+        
+        /* Team animations */
+        @keyframes cheer {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0); }
+        }
+        .cheering {
+            animation: cheer 0.5s ease infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col p-4 md:p-8">
+
+    <!-- Header -->
+    <header class="text-center mb-8">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-red-600 mb-2">
+            <i class="fa-solid fa-people-pulling mr-2 text-gray-800"></i> Tug-of-War Review
+        </h1>
+        <p class="text-gray-600 font-medium">Review 1: Vocabulary & Grammar</p>
+    </header>
+
+    <!-- Game Arena -->
+    <div class="max-w-5xl w-full mx-auto bg-white rounded-3xl shadow-2xl p-6 md:p-10 mb-8 border border-gray-100 relative">
+        
+        <!-- Teams Setup -->
+        <div class="flex justify-between items-center mb-10">
+            <!-- Team A -->
+            <div id="team-a-card" class="text-center p-4 rounded-2xl w-32 border-4 border-transparent cursor-pointer transition-all duration-300" onclick="setTurn('A')">
+                <div class="text-5xl text-blue-500 mb-2"><i class="fa-solid fa-users"></i></div>
+                <h2 class="text-xl font-bold text-blue-700">Team A</h2>
+            </div>
+            
+            <!-- VS -->
+            <div class="text-2xl font-black text-gray-300">VS</div>
+
+            <!-- Team B -->
+            <div id="team-b-card" class="text-center p-4 rounded-2xl w-32 border-4 border-transparent cursor-pointer transition-all duration-300" onclick="setTurn('B')">
+                <div class="text-5xl text-red-500 mb-2"><i class="fa-solid fa-users"></i></div>
+                <h2 class="text-xl font-bold text-red-700">Team B</h2>
+            </div>
+        </div>
+
+        <!-- The Rope -->
+        <div class="rope-container mb-12">
+            <div class="rope">
+                <!-- Marks -->
+                <div class="rope-mark" style="left: 0%;"></div>
+                <div class="rope-mark" style="left: 10%;"></div>
+                <div class="rope-mark" style="left: 20%;"></div>
+                <div class="rope-mark" style="left: 30%;"></div>
+                <div class="rope-mark" style="left: 40%;"></div>
+                <div class="rope-mark center-mark" style="left: 50%;"></div>
+                <div class="rope-mark" style="left: 60%;"></div>
+                <div class="rope-mark" style="left: 70%;"></div>
+                <div class="rope-mark" style="left: 80%;"></div>
+                <div class="rope-mark" style="left: 90%;"></div>
+                <div class="rope-mark" style="left: 100%;"></div>
+            </div>
+            
+            <!-- The Flag (starts at 50%) -->
+            <div id="flag" class="flag-wrapper" style="left: 50%;">
+                <i class="fa-solid fa-flag text-yellow-400 text-6xl drop-shadow-md"></i>
+            </div>
+        </div>
+
+        <!-- Turn Indicator -->
+        <div class="text-center mb-6 h-8">
+            <span id="turn-indicator" class="px-6 py-2 rounded-full font-bold text-lg hidden shadow-sm">
+                <!-- Injected via JS -->
+            </span>
+        </div>
+
+        <!-- Question Area -->
+        <div id="question-container" class="bg-gray-50 rounded-2xl p-6 md:p-8 text-center border-2 border-gray-100">
+            <div class="text-sm font-bold text-gray-400 mb-2 tracking-wider uppercase">Question <span id="q-num">1</span> of 15</div>
+            <h3 id="question-text" class="text-2xl md:text-3xl font-semibold text-gray-800 mb-8 leading-relaxed">
+                Loading question...
+            </h3>
+
+            <!-- Options Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="options-grid">
+                <!-- Options injected via JS -->
+            </div>
+        </div>
+
+        <!-- Feedback & Next Action Area -->
+        <div id="feedback-area" class="hidden mt-8 text-center">
+            <h2 id="feedback-msg" class="text-3xl font-black mb-4"></h2>
+            <button onclick="nextQuestion()" class="bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105 active:scale-95">
+                Next Question <i class="fa-solid fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+
+        <!-- Game Over Area -->
+        <div id="game-over-area" class="hidden mt-8 text-center py-8">
+            <div class="text-7xl mb-4" id="winner-icon"><i class="fa-solid fa-trophy text-yellow-500"></i></div>
+            <h2 id="winner-text" class="text-4xl font-black mb-6 text-gray-800">Team A Wins!</h2>
+            <button onclick="initGame()" class="bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105 active:scale-95 text-xl">
+                Play Again <i class="fa-solid fa-rotate-right ml-2"></i>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Instructions / Footer -->
+    <div class="text-center text-gray-500 text-sm pb-8 max-w-2xl mx-auto">
+        <p><strong>How to play:</strong> Teacher selects which team's turn it is (click Team A or B). The team answers. If correct, the flag moves towards them. If wrong, it moves to the opponent. The first team to pull the flag completely to their side wins!</p>
+    </div>
+
+    <!-- Audio Effects (Using standard web audio API for generated beeps instead of external files to ensure it works) -->
+    <script>
+        // --- Sound Effects Generator ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(type) {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            if (type === 'correct') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+                osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1); // E5
+                osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.2); // G5
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.5);
+            } else if (type === 'wrong') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.3);
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+            } else if (type === 'win') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(554, audioCtx.currentTime + 0.2);
+                osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.4);
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.6);
+                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1.5);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 1.5);
+            }
+        }
+
+        // --- Game Data ---
+        const allQuestions = [
+            { q: "In my family, my mum does the cooking, and my dad shops for ________.", opts: ["groceries", "laundry", "perform", "audience"], ans: 0 },
+            { q: "We divide household chores equally ________ everyone has some responsibilities.", opts: ["so", "and", "but", "or"], ans: 0 },
+            { q: "The ________ clapped for 15 minutes when the band finished playing.", opts: ["eco-friendly", "audience", "perform", "groceries"], ans: 1 },
+            { q: "I wanted ________ my cooking skills last year.", opts: ["improve", "improving", "to improve", "to improving"], ans: 2 },
+            { q: "Passive Voice: 'They plant trees.' ➔ Trees ________.", opts: ["are planted", "planted", "are planting", "plant"], ans: 0 },
+            { q: "My father puts ________ every day.", opts: ["a green lifestyle", "our carbon footprint", "the rubbish out", "many musical instruments"], ans: 2 },
+            { q: "Next Sunday evening, I ________ their show live on TV.", opts: ["watch", "am watching", "will watch", "watched"], ans: 2 },
+            { q: "Many people in our neighbourhood are using ________ materials.", opts: ["laundry", "perform", "eco-friendly", "audience"], ans: 2 },
+            { q: "Nam can't clean the house now because he ________ his sister with her homework.", opts: ["helps", "is helping", "helped", "has helped"], ans: 1 },
+            { q: "Is it difficult to reduce ________?", opts: ["on a TV show", "our carbon footprint", "the rubbish out", "a green lifestyle"], ans: 1 },
+            { q: "Passive Voice: 'We turned off all the devices.' ➔ All devices ________.", opts: ["turned off", "were turned off", "are turned off", "will be turned off"], ans: 1 },
+            { q: "We must remember to turn off all the ________ in the house when we go out.", opts: ["electrical devices", "carbon footprints", "audiences", "groceries"], ans: 0 },
+            { q: "My grandparents ________ singing twice a week.", opts: ["practise", "are practising", "practised", "will practise"], ans: 0 },
+            { q: "He was one of the judges ________.", opts: ["many musical instruments", "a green lifestyle", "our carbon footprint", "on a popular TV talent show"], ans: 3 },
+            { q: "Don't throw away unwanted items, ________ sort them and send them for recycling.", opts: ["so", "and", "but", "or"], ans: 2 }
+        ];
+
+        // --- Game State ---
+        let currentQuestionList = [];
+        let currentIndex = 0;
+        let score = 0; // -5 is Team A win, +5 is Team B win. 0 is center.
+        let currentTurn = null; // 'A' or 'B'
+        let isAnswered = false;
+
+        const flagEl = document.getElementById('flag');
+        const qNumEl = document.getElementById('q-num');
+        const qTextEl = document.getElementById('question-text');
+        const optionsGrid = document.getElementById('options-grid');
+        const teamACard = document.getElementById('team-a-card');
+        const teamBCard = document.getElementById('team-b-card');
+        const turnIndicator = document.getElementById('turn-indicator');
+        const feedbackArea = document.getElementById('feedback-area');
+        const feedbackMsg = document.getElementById('feedback-msg');
+        const questionContainer = document.getElementById('question-container');
+        const gameOverArea = document.getElementById('game-over-area');
+
+        function shuffle(array) {
+            let currentIndex = array.length,  randomIndex;
+            while (currentIndex != 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        function initGame() {
+            currentQuestionList = shuffle([...allQuestions]);
+            currentIndex = 0;
+            score = 0;
+            currentTurn = null;
+            updateFlagPosition();
+            
+            gameOverArea.classList.add('hidden');
+            questionContainer.classList.remove('hidden');
+            
+            resetTeamStyles();
+            turnIndicator.classList.add('hidden');
+            
+            loadQuestion();
+        }
+
+        function setTurn(team) {
+            if(isAnswered) return;
+            currentTurn = team;
+            resetTeamStyles();
+            
+            turnIndicator.classList.remove('hidden');
+            
+            if (team === 'A') {
+                teamACard.classList.add('border-blue-500', 'bg-blue-50', 'transform', 'scale-110');
+                teamBCard.classList.add('opacity-50');
+                turnIndicator.innerHTML = '<i class="fa-solid fa-caret-left"></i> Team A\'s Turn';
+                turnIndicator.className = "px-6 py-2 rounded-full font-bold text-lg shadow-sm bg-blue-100 text-blue-700 inline-block animate-pulse";
+            } else {
+                teamBCard.classList.add('border-red-500', 'bg-red-50', 'transform', 'scale-110');
+                teamACard.classList.add('opacity-50');
+                turnIndicator.innerHTML = 'Team B\'s Turn <i class="fa-solid fa-caret-right"></i>';
+                turnIndicator.className = "px-6 py-2 rounded-full font-bold text-lg shadow-sm bg-red-100 text-red-700 inline-block animate-pulse";
+            }
+        }
+
+        function resetTeamStyles() {
+            teamACard.className = "text-center p-4 rounded-2xl w-32 border-4 border-transparent cursor-pointer transition-all duration-300";
+            teamBCard.className = "text-center p-4 rounded-2xl w-32 border-4 border-transparent cursor-pointer transition-all duration-300";
+            teamACard.classList.remove('cheering');
+            teamBCard.classList.remove('cheering');
+        }
+
+        function loadQuestion() {
+            if (currentIndex >= currentQuestionList.length) {
+                endGameByQuestions();
+                return;
+            }
+
+            isAnswered = false;
+            feedbackArea.classList.add('hidden');
+            optionsGrid.innerHTML = '';
+            
+            const q = currentQuestionList[currentIndex];
+            qNumEl.innerText = (currentIndex + 1);
+            qTextEl.innerText = q.q;
+
+            q.opts.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "option-btn bg-white border-2 border-gray-200 text-gray-700 font-semibold py-4 px-6 rounded-xl hover:bg-gray-50 hover:border-gray-300 focus:outline-none w-full text-lg shadow-sm flex items-center";
+                btn.innerHTML = `<span class="bg-gray-100 text-gray-500 rounded-full w-8 h-8 flex items-center justify-center mr-4 font-bold">${String.fromCharCode(65 + idx)}</span> <span class="text-left">${opt}</span>`;
+                btn.onclick = () => checkAnswer(idx);
+                optionsGrid.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selectedIdx) {
+            if (isAnswered) return;
+            if (!currentTurn) {
+                // Warning modal equivalent
+                turnIndicator.classList.remove('hidden');
+                turnIndicator.innerHTML = "⚠️ Please select a Team first!";
+                turnIndicator.className = "px-6 py-2 rounded-full font-bold text-lg shadow-sm bg-yellow-100 text-yellow-700 inline-block animate-bounce";
+                return;
+            }
+
+            isAnswered = true;
+            const q = currentQuestionList[currentIndex];
+            const isCorrect = (selectedIdx === q.ans);
+            const buttons = optionsGrid.querySelectorAll('button');
+
+            // Highlight buttons
+            buttons.forEach((btn, idx) => {
+                btn.disabled = true;
+                if (idx === q.ans) {
+                    btn.classList.remove('border-gray-200', 'bg-white', 'text-gray-700');
+                    btn.classList.add('border-green-500', 'bg-green-50', 'text-green-700');
+                } else if (idx === selectedIdx && !isCorrect) {
+                    btn.classList.remove('border-gray-200', 'bg-white', 'text-gray-700');
+                    btn.classList.add('border-red-500', 'bg-red-50', 'text-red-700');
+                }
+            });
+
+            if (isCorrect) {
+                playSound('correct');
+                feedbackMsg.innerHTML = `<span class="text-green-500"><i class="fa-solid fa-circle-check"></i> Correct!</span> Team ${currentTurn} pulls the rope!`;
+                // Move flag towards current team
+                if (currentTurn === 'A') {
+                    score -= 1;
+                    teamACard.classList.add('cheering');
+                } else {
+                    score += 1;
+                    teamBCard.classList.add('cheering');
+                }
+            } else {
+                playSound('wrong');
+                feedbackMsg.innerHTML = `<span class="text-red-500"><i class="fa-solid fa-circle-xmark"></i> Incorrect!</span> The rope slips towards the other team!`;
+                // Penalty: Move flag towards opponent
+                if (currentTurn === 'A') {
+                    score += 1; // Moves to B
+                } else {
+                    score -= 1; // Moves to A
+                }
+            }
+
+            updateFlagPosition();
+            feedbackArea.classList.remove('hidden');
+            turnIndicator.classList.add('hidden');
+            
+            // Check win condition instantly
+            if (score <= -5) {
+                setTimeout(() => endGame('A'), 800);
+            } else if (score >= 5) {
+                setTimeout(() => endGame('B'), 800);
+            }
+        }
+
+        function updateFlagPosition() {
+            // score ranges from -5 to 5.
+            // 0 -> 50%
+            // -5 -> 0%
+            // 5 -> 100%
+            let percentage = 50 + (score * 10);
+            // clamp
+            if (percentage < 0) percentage = 0;
+            if (percentage > 100) percentage = 100;
+            
+            flagEl.style.left = `${percentage}%`;
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            currentTurn = null;
+            resetTeamStyles();
+            loadQuestion();
+        }
+
+        function endGame(winner) {
+            playSound('win');
+            questionContainer.classList.add('hidden');
+            feedbackArea.classList.add('hidden');
+            turnIndicator.classList.add('hidden');
+            gameOverArea.classList.remove('hidden');
+            
+            const winnerText = document.getElementById('winner-text');
+            const winnerIcon = document.getElementById('winner-icon');
+            
+            if (winner === 'A') {
+                winnerText.innerHTML = "Team A (Blue) Wins the Tug-of-War!";
+                winnerText.className = "text-4xl font-black mb-6 text-blue-600";
+                winnerIcon.innerHTML = '<i class="fa-solid fa-medal text-blue-500 text-8xl drop-shadow-lg"></i>';
+            } else {
+                winnerText.innerHTML = "Team B (Red) Wins the Tug-of-War!";
+                winnerText.className = "text-4xl font-black mb-6 text-red-600";
+                winnerIcon.innerHTML = '<i class="fa-solid fa-medal text-red-500 text-8xl drop-shadow-lg"></i>';
+            }
+        }
+
+        function endGameByQuestions() {
+            playSound('win');
+            questionContainer.classList.add('hidden');
+            feedbackArea.classList.add('hidden');
+            turnIndicator.classList.add('hidden');
+            gameOverArea.classList.remove('hidden');
+            
+            const winnerText = document.getElementById('winner-text');
+            const winnerIcon = document.getElementById('winner-icon');
+            
+            if (score < 0) {
+                winnerText.innerHTML = "Questions Finished! Team A is closer to victory!";
+                winnerText.className = "text-4xl font-black mb-6 text-blue-600";
+                winnerIcon.innerHTML = '<i class="fa-solid fa-trophy text-blue-500 text-8xl drop-shadow-lg"></i>';
+            } else if (score > 0) {
+                winnerText.innerHTML = "Questions Finished! Team B is closer to victory!";
+                winnerText.className = "text-4xl font-black mb-6 text-red-600";
+                winnerIcon.innerHTML = '<i class="fa-solid fa-trophy text-red-500 text-8xl drop-shadow-lg"></i>';
+            } else {
+                winnerText.innerHTML = "Questions Finished! It's a TIE!";
+                winnerText.className = "text-4xl font-black mb-6 text-gray-800";
+                winnerIcon.innerHTML = '<i class="fa-solid fa-handshake text-yellow-500 text-8xl drop-shadow-lg"></i>';
+            }
+        }
+
+        // Start game on load
+        window.onload = initGame;
+
+    </script>
+</body>
+</html>
